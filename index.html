@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Açaíman - Gerador de Códigos de Barras</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsbarcode@3.11.0/dist/JsBarcode.all.min.js"></script>
+    <style>
+        /* Reset de margens e padding */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #6a2c91; /* Roxo Açaí */
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 2rem;
+            color: #fff;
+            margin-bottom: 20px;
+        }
+
+        /* Container para os inputs e botões */
+        .container {
+            width: 90%;
+            max-width: 400px;
+            margin-top: 20px;
+        }
+
+        label {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            margin-bottom: 20px;
+            border: 2px solid #8e44ad;
+            border-radius: 5px;
+            background-color: #f2f2f2;
+            color: #333;
+        }
+
+        button {
+            padding: 15px;
+            font-size: 16px;
+            width: 100%;
+            background-color: #8e44ad;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        button:hover {
+            background-color: #9b59b6;
+        }
+
+        #barcode-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        svg {
+            margin-top: 10px;
+            max-width: 100%;
+        }
+
+        #downloadSVGButton {
+            display: none;
+            margin-top: 20px;
+            padding: 12px;
+            background-color: #27ae60; /* Verde Açaí */
+        }
+
+        /* Responsividade para telas pequenas */
+        @media (max-width: 500px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            button {
+                font-size: 14px;
+            }
+
+            input {
+                font-size: 14px;
+                padding: 10px;
+            }
+        }
+
+        /* Estilo do rodapé */
+        footer {
+            position: absolute;
+            bottom: 10px;
+            font-size: 0.9rem;
+            color: #fff;
+            width: 100%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <h1>Açaíman - Gerador de Códigos de Barras</h1>
+    <div class="container">
+        <label for="productName">Nome do Produto:</label>
+        <input type="text" id="productName" placeholder="Digite o nome do produto">
+        <button id="generateButton" onclick="generateBarcode()">Gerar Código de Barras</button>
+
+        <!-- Exibe o nome do produto acima do código de barras -->
+        <div id="barcode-container" style="display: none;">
+            <svg id="barcode"></svg>
+        </div>
+
+        <button id="downloadSVGButton" onclick="downloadBarcodeSVG()">Baixar Código de Barras como SVG</button>
+    </div>
+
+    <footer>
+        Desenvolvido por Natanael Carvalho
+    </footer>
+
+    <script>
+        // Função para gerar o código EAN-13
+        function generateEAN13(productName) {
+            // Gerar um número aleatório de 12 dígitos (exemplo para fins de teste)
+            let eanBase = Math.floor(Math.random() * 1e12); // 12 dígitos
+            let eanString = String(eanBase).padStart(12, '0');
+
+            // Calcular o dígito verificador
+            let sum = 0;
+            for (let i = 0; i < 12; i++) {
+                let digit = parseInt(eanString[i]);
+                if (i % 2 === 0) {
+                    sum += digit; // Posições ímpares (começando de 0)
+                } else {
+                    sum += digit * 3; // Posições pares multiplicadas por 3
+                }
+            }
+            let remainder = sum % 10;
+            let checkDigit = remainder === 0 ? 0 : 10 - remainder;
+
+            // Adicionar o dígito verificador ao final
+            eanString += checkDigit;
+
+            return eanString;
+        }
+
+        function generateBarcode() {
+            var productName = document.getElementById("productName").value;
+
+            // Se o campo estiver vazio, não gerar código de barras
+            if (!productName) {
+                alert("Por favor, insira um nome de produto.");
+                return;
+            }
+
+            // Gerar o código EAN-13
+            var barcodeValue = generateEAN13(productName);
+
+            // Gerar o código de barras no formato EAN13
+            JsBarcode("#barcode", barcodeValue, {
+                format: "EAN13",
+                lineColor: "#000000",
+                width: 3,
+                height: 100,
+                displayValue: true,
+                fontOptions: "bold",
+                textAlign: "center",  // Alinha o texto do código de barras (o valor numérico) ao centro
+                textPosition: "bottom", // Exibe o texto abaixo do código de barras
+                fontSize: 18,  // Tamanho do texto
+                marginTop: 20,  // Espaço acima do código
+            });
+
+            // Agora vamos adicionar o nome do produto diretamente dentro do SVG após a geração do código de barras
+            addProductNameToSVG(productName);
+
+            // Mostrar a área do código de barras e o botão de "Baixar SVG"
+            document.getElementById('barcode-container').style.display = 'block';
+            document.getElementById('downloadSVGButton').style.display = 'inline-block';
+        }
+
+        // Função para adicionar o nome do produto como texto dentro do SVG
+        function addProductNameToSVG(productName) {
+            const svgElement = document.getElementById("barcode");
+
+            // Adicionar um nome de produto no topo do SVG
+            const textElement = document.createElementNS("http://www.w3.org/2000/svg", "text");
+            textElement.setAttribute("x", "50%");  // Centraliza no eixo X
+            textElement.setAttribute("y", "15");   // Posição do nome do produto no eixo Y (acima do código de barras)
+            textElement.setAttribute("font-size", "18");
+            textElement.setAttribute("font-family", "Arial");
+            textElement.setAttribute("text-anchor", "middle");  // Garante que o texto será centralizado
+
+            // Adicionando o nome do produto como conteúdo do elemento de texto
+            textElement.textContent = productName;
+
+            // Adiciona o texto ao SVG
+            svgElement.insertBefore(textElement, svgElement.firstChild); // Insere o texto antes do código de barras
+        }
+
+        // Função para baixar o SVG gerado
+        function downloadBarcodeSVG() {
+            const barcodeSVG = document.getElementById("barcode");
+
+            // Usar a função XMLSerializer para transformar o SVG em string
+            const svgData = new XMLSerializer().serializeToString(barcodeSVG);
+
+            // Criar um link temporário para realizar o download do SVG
+            const link = document.createElement("a");
+            link.href = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgData);
+            link.download = "codigo_de_barras_com_nome.svg"; // Nome do arquivo a ser baixado
+            document.body.appendChild(link);
+            link.click(); // Acionar o download
+            document.body.removeChild(link); // Remover o link temporário
+        }
+    </script>
+</body>
+</html>
